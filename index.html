@@ -70,83 +70,110 @@ footer{
 <body>
 
 <div id="slideshow"></div>
-<footer>Atualização automática • 40 notícias • Troca a cada 10s</footer>
+<footer>Atualização automática • Até 40 notícias • Troca a cada 10s</footer>
 
 <script>
-const rss = 'https://g1.globo.com/rss/g1/';
-const proxy = 'https://api.allorigins.win/raw?url=' + encodeURIComponent(rss);
+// ===== FEEDS =====
+const feeds = [
+  'https://g1.globo.com/rss/g1/brasil/',
+  'https://g1.globo.com/rss/g1/mundo/',
+  'https://g1.globo.com/rss/g1/economia/',
+  'https://g1.globo.com/rss/g1/tecnologia/',
+  'https://g1.globo.com/rss/g1/esporte/',
+  'https://noticias.uol.com.br/rss/',
+  'https://www.cnnbrasil.com.br/feed/'
+];
 
-const MAX_NOTICIAS = 40;   // Quantidade de notícias no loop
-const TEMPO_TROCA = 10000; // 10 segundos por slide
+const MAX_NOTICIAS = 40;
+const TEMPO_TROCA = 10000; // 10 segundos
+
+const proxy = 'https://api.allorigins.win/raw?url=';
 
 let slides = [];
 let index = 0;
 
 async function carregarNoticias(){
-    try{
-        const res = await fetch(proxy);
-        const text = await res.text();
-        const xml = new DOMParser().parseFromString(text,'text/xml');
-        const items = xml.querySelectorAll('item');
+  try{
+    let todas = [];
 
-        montarSlides([...items].slice(0, MAX_NOTICIAS));
-    }catch(e){
-        document.getElementById('slideshow').innerHTML =
-            '<h1 style="padding:30px">Erro ao carregar notícias</h1>';
+    for(const feed of feeds){
+      const res = await fetch(proxy + encodeURIComponent(feed));
+      const text = await res.text();
+      const xml = new DOMParser().parseFromString(text,'text/xml');
+      const items = [...xml.querySelectorAll('item')];
+      todas.push(...items);
     }
+
+    // Remove duplicadas pelo título
+    const unicas = [];
+    const titulos = new Set();
+
+    todas.forEach(item => {
+      const t = item.querySelector('title')?.textContent;
+      if(t && !titulos.has(t)){
+        titulos.add(t);
+        unicas.push(item);
+      }
+    });
+
+    montarSlides(unicas.slice(0, MAX_NOTICIAS));
+
+  }catch(e){
+    document.getElementById('slideshow').innerHTML = '<h1 style="padding:30px">Erro ao carregar notícias</h1>';
+  }
 }
 
 function extrairImagem(desc){
-    const div = document.createElement('div');
-    div.innerHTML = desc;
-    const img = div.querySelector('img');
-    return img ? img.src : null;
+  const div = document.createElement('div');
+  div.innerHTML = desc;
+  const img = div.querySelector('img');
+  return img ? img.src : null;
 }
 
 function montarSlides(items){
-    const box = document.getElementById('slideshow');
-    box.innerHTML='';
-    slides=[];
+  const box = document.getElementById('slideshow');
+  box.innerHTML='';
+  slides=[];
 
-    items.forEach((item,i)=>{
-        const title = item.querySelector('title')?.textContent || '';
-        const descHtml = item.querySelector('description')?.textContent || '';
-        const texto = descHtml.replace(/<[^>]*>/g,'').substring(0,240);
+  items.forEach((item,i)=>{
+    const title = item.querySelector('title')?.textContent || '';
+    const descHtml = item.querySelector('description')?.textContent || '';
+    const texto = descHtml.replace(/<[^>]*>/g,'').substring(0,240);
 
-        let img = extrairImagem(descHtml);
+    let img = extrairImagem(descHtml);
 
-        if(!img){
-            img = 'https://picsum.photos/1280/720?random='+i;
-        }
+    if(!img){
+      img = 'https://picsum.photos/1280/720?random='+i;
+    }
 
-        const slide = document.createElement('div');
-        slide.className='slide';
+    const slide = document.createElement('div');
+    slide.className='slide';
 
-        slide.innerHTML=`
-            <div class="img" style="background-image:url('${img}')"></div>
-            <div class="text">
-                <h1>${title}</h1>
-                <p>${texto}...</p>
-            </div>
-        `;
+    slide.innerHTML = `
+      <div class="img" style="background-image:url('${img}')"></div>
+      <div class="text">
+        <h1>${title}</h1>
+        <p>${texto}...</p>
+      </div>
+    `;
 
-        box.appendChild(slide);
-        slides.push(slide);
-    });
+    box.appendChild(slide);
+    slides.push(slide);
+  });
 
-    index=0;
-    mostrar();
+  index = 0;
+  mostrar();
 }
 
 function mostrar(){
-    if(slides.length === 0) return;
-    slides.forEach(s=>s.classList.remove('active'));
-    slides[index].classList.add('active');
-    index = (index+1)%slides.length;
+  if(slides.length === 0) return;
+  slides.forEach(s=>s.classList.remove('active'));
+  slides[index].classList.add('active');
+  index = (index + 1) % slides.length;
 }
 
 setInterval(mostrar, TEMPO_TROCA);
-setInterval(carregarNoticias, 300000); // Atualiza feed a cada 5 minutos
+setInterval(carregarNoticias, 300000); // 5 minutos
 
 carregarNoticias();
 </script>
