@@ -73,7 +73,7 @@ footer{
 <footer>Atualização automática</footer>
 
 <script>
-const rss = 'https://www.cnnbrasil.com.br/feed/';
+const rss = 'https://g1.globo.com/rss/g1/';
 const proxy = 'https://api.allorigins.win/raw?url=' + encodeURIComponent(rss);
 
 let slides = [];
@@ -89,7 +89,7 @@ async function carregarNoticias(){
         montarSlides([...items].slice(0,10));
     }catch(e){
         document.getElementById('slideshow').innerHTML =
-            '<h1 style="padding:30px">Erro ao carregar feed</h1>';
+            '<h1 style=\"padding:30px\">Erro ao carregar notícias</h1>';
     }
 }
 
@@ -102,7 +102,9 @@ function montarSlides(items){
         const title = item.querySelector('title')?.textContent || '';
         const desc = item.querySelector('description')?.textContent || '';
 
-        let img = item.querySelector('media\\:content')?.getAttribute('url');
+        let img =
+            item.querySelector('media\\:content')?.getAttribute('url') ||
+            item.querySelector('enclosure')?.getAttribute('url');
 
         if(!img){
             img = 'https://picsum.photos/1280/720?random='+i;
@@ -112,8 +114,8 @@ function montarSlides(items){
         slide.className='slide';
 
         slide.innerHTML=`
-            <div class="img" style="background-image:url('${img}')"></div>
-            <div class="text">
+            <div class=\"img\" style=\"background-image:url('${img}')\"></div>
+            <div class=\"text\">
                 <h1>${title}</h1>
                 <p>${desc.replace(/<[^>]*>/g,'').substring(0,220)}...</p>
             </div>
