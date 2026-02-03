@@ -1,91 +1,139 @@
 <!DOCTYPE html>
-text-align: center;
-padding: 10px;
-background: #111;
-font-size: 14px;
+<html lang="pt-br">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Notícias - Mídia Indoor</title>
+
+<style>
+*{box-sizing:border-box}
+
+body{
+    margin:0;
+    background:black;
+    font-family:Arial, Helvetica, sans-serif;
+    color:white;
+    overflow:hidden;
+}
+
+#slideshow{
+    width:100vw;
+    height:100vh;
+    position:relative;
+}
+
+.slide{
+    position:absolute;
+    inset:0;
+    display:none;
+    flex-direction:column;
+}
+
+.slide.active{
+    display:flex;
+}
+
+.img{
+    flex:1;
+    background-size:cover;
+    background-position:center;
+}
+
+.text{
+    background:rgba(0,0,0,.75);
+    padding:25px;
+}
+
+h1{
+    margin:0 0 10px;
+    font-size:36px;
+}
+
+p{
+    margin:0;
+    font-size:20px;
+    color:#ddd;
+}
+
+footer{
+    position:absolute;
+    bottom:0;
+    width:100%;
+    text-align:center;
+    padding:8px;
+    background:#111;
+    font-size:14px;
 }
 </style>
 </head>
+
 <body>
 
-
 <div id="slideshow"></div>
-
-
-<footer>Atualização automática a cada 5 minutos</footer>
-
+<footer>Atualização automática</footer>
 
 <script>
-const rssUrl = "https://www.cnnbrasil.com.br/feed/";
-const api = "https://api.rss2json.com/v1/api.json?rss_url=" + encodeURIComponent(rssUrl);
-
+const rss = 'https://www.cnnbrasil.com.br/feed/';
+const proxy = 'https://api.allorigins.win/raw?url=' + encodeURIComponent(rss);
 
 let slides = [];
-let slideIndex = 0;
+let index = 0;
 
+async function carregarNoticias(){
+    try{
+        const res = await fetch(proxy);
+        const text = await res.text();
+        const xml = new DOMParser().parseFromString(text,'text/xml');
+        const items = xml.querySelectorAll('item');
 
-async function carregarNoticias() {
-try {
-const res = await fetch(api);
-const data = await res.json();
-montarSlides(data.items.slice(0, 10));
-} catch (e) {
-document.getElementById('slideshow').innerHTML = '<h1 style="padding:30px">Erro ao carregar notícias</h1>';
-}
-}
-
-
-function montarSlides(noticias) {
-const container = document.getElementById('slideshow');
-container.innerHTML = '';
-slides = [];
-
-
-noticias.forEach((item, i) => {
-const img = item.enclosure?.link || 'https://picsum.photos/1280/720?random=' + i;
-
-
-const slide = document.createElement('div');
-slide.className = 'slide';
-
-
-slide.innerHTML = `
-<div class="img-container" style="background-image:url('${img}')"></div>
-<div class="content">
-<h1>${item.title}</h1>
-<p>${item.description.replace(/<[^>]*>/g,'').substring(0,220)}...</p>
-</div>
-`;
-
-
-container.appendChild(slide);
-slides.push(slide);
-});
-
-
-slideIndex = 0;
-mostrarSlide();
+        montarSlides([...items].slice(0,10));
+    }catch(e){
+        document.getElementById('slideshow').innerHTML =
+            '<h1 style="padding:30px">Erro ao carregar feed</h1>';
+    }
 }
 
+function montarSlides(items){
+    const box = document.getElementById('slideshow');
+    box.innerHTML='';
+    slides=[];
 
-function mostrarSlide() {
-slides.forEach(slide => slide.classList.remove('active'));
-slides[slideIndex].classList.add('active');
-slideIndex = (slideIndex + 1) % slides.length;
+    items.forEach((item,i)=>{
+        const title = item.querySelector('title')?.textContent || '';
+        const desc = item.querySelector('description')?.textContent || '';
+        const img = item.querySelector('enclosure')?.getAttribute('url') ||
+                    'https://picsum.photos/1280/720?random='+i;
+
+        const slide = document.createElement('div');
+        slide.className='slide';
+
+        slide.innerHTML=`
+            <div class="img" style="background-image:url('${img}')"></div>
+            <div class="text">
+                <h1>${title}</h1>
+                <p>${desc.replace(/<[^>]*>/g,'').substring(0,220)}...</p>
+            </div>
+        `;
+
+        box.appendChild(slide);
+        slides.push(slide);
+    });
+
+    index=0;
+    mostrar();
 }
 
+function mostrar(){
+    slides.forEach(s=>s.classList.remove('active'));
+    slides[index].classList.add('active');
+    index = (index+1)%slides.length;
+}
 
-// Troca a cada 10 segundos
-setInterval(mostrarSlide, 10000);
-
-
-// Atualiza feed a cada 5 minutos
-setInterval(carregarNoticias, 300000);
-
+setInterval(mostrar,10000);      // troca a cada 10s
+setInterval(carregarNoticias,300000); // atualiza feed 5min
 
 carregarNoticias();
 </script>
-
 
 </body>
 </html>
